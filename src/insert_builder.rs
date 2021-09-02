@@ -18,14 +18,13 @@ impl InsertBuilder {
     ///
     /// ```
     /// use postgres_querybuilder::InsertBuilder;
-    /// use postgres_querybuilder::prelude::{QueryBuilder, QueryBuilderWithSet, QueryBuilderWithWhere};
+    /// use postgres_querybuilder::prelude::{QueryBuilder, QueryBuilderWithValues, QueryBuilderWithWhere};
     ///
-    /// let user_password = "password".to_string();
     /// let mut builder = InsertBuilder::new("users");
-    /// builder.set("username", "rick".to_string());
-    /// builder.where_eq("id", 42);
+    /// builder.field("username");
+    /// builder.value("rick".to_string());
     ///
-    /// assert_eq!(builder.get_query(), "INSERT INTO users (username) VALUES ($1) WHERE id = $2");
+    /// assert_eq!(builder.get_query(), "INSERT INTO users (username) VALUES ($1)");
     /// ```
     pub fn new(from: &str) -> Self {
         InsertBuilder {
@@ -73,7 +72,7 @@ impl InsertBuilder {
 
     fn values_to_query(&self) -> Option<String> {
         if self.values.len() > 0 {
-            let values_query = self.fields.join(", ");
+            let values_query = self.values.join(", ");
             Some(format!("VALUES ({})", values_query))
         } else {
             None
@@ -132,7 +131,7 @@ impl QueryBuilderWithWhere for InsertBuilder {
 impl QueryBuilderWithValues for InsertBuilder {
     fn value<T: 'static + ToSql + Sync + Clone>(&mut self, value: T) -> &mut Self {
         let index = self.params.push(value);
-        self.fields.push(format!("${}", index));
+        self.values.push(format!("${}", index));
         self
     }
 }

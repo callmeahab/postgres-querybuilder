@@ -10,9 +10,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="63d6643e-82a9-44a1-933a-7cb4ef6ca99d" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/src/insert_builder.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/prelude.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/prelude.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/insert_builder.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/insert_builder.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -71,7 +70,7 @@
       <option name="presentableId" value="Default" />
       <updated>1630564525474</updated>
       <workItem from="1630564529684" duration="673000" />
-      <workItem from="1630567042139" duration="5205000" />
+      <workItem from="1630567042139" duration="6315000" />
     </task>
     <servers />
   </component>
