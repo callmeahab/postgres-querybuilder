@@ -113,12 +113,21 @@ pub trait QueryBuilderWithSet {
     fn set_computed(&mut self, field: &str, value: &str) -> &mut Self;
 }
 
+pub trait QueryBuilderWithValues {
+    fn value<T: 'static + ToSql + Sync + Clone>(&mut self, value: T) -> &mut Self;
+}
+
 pub trait QueryBuilderWithFrom {
     fn from(&mut self, item: &str) -> &mut Self;
 }
 
-pub trait QueryBuilderWithValues {
-    fn value<T: 'static + ToSql + Sync + Clone>(&mut self, value: T) -> &mut Self;
+pub struct OnConflict {
+    pub target: Option<String>,
+    pub action: String,
+}
+
+pub trait QueryBuilderWithOnConflict {
+    fn on_conflict(&mut self, target: Option<&str>, action: &str) -> &mut Self;
 }
 
 pub enum Order {

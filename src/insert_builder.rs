@@ -8,6 +8,7 @@ pub struct InsertBuilder {
     fields: Vec<String>,
     values: Vec<String>,
     conditions: Vec<String>,
+    on_conflict: Option<OnConflict>,
     params: Bucket,
 }
 
@@ -34,6 +35,7 @@ impl InsertBuilder {
             values: vec![],
             conditions: vec![],
             params: Bucket::new(),
+            on_conflict: None,
         }
     }
 
@@ -87,6 +89,16 @@ impl InsertBuilder {
             None
         }
     }
+
+    fn on_conflict_to_query(&self) -> Option<String> {
+        match &self.on_conflict {
+            Some(item) => match &item.target {
+                Some(target) => Some(format!("ON CONFLICT ({}) DO {}", target, item.action)),
+                None => Some(format!("ON CONFLICT DO {}", item.action)),
+            },
+            None => None,
+        }
+    }
 }
 
 impl QueryBuilder for InsertBuilder {
@@ -110,6 +122,10 @@ impl QueryBuilder for InsertBuilder {
             None => (),
         };
         match self.where_to_query() {
+            Some(value) => result.push(value),
+            None => (),
+        };
+        match self.on_conflict_to_query() {
             Some(value) => result.push(value),
             None => (),
         };
@@ -139,6 +155,21 @@ impl QueryBuilderWithValues for InsertBuilder {
 impl QueryBuilderWithQueries for InsertBuilder {
     fn with_query(&mut self, name: &str, query: &str) -> &mut Self {
         self.with_queries.push((name.into(), query.into()));
+        self
+    }
+}
+
+impl QueryBuilderWithOnConflict for InsertBuilder {
+    fn on_conflict(&mut self, target: Option<&str>, action: &str) -> &mut Self {
+        let target = if let Some(target) = target {
+            Some(target.to_string())
+        } else {
+            None
+        };
+        self.on_conflict = Some(OnConflict {
+            target,
+            action: action.to_string(),
+        });
         self
     }
 }
