@@ -113,6 +113,10 @@ pub trait QueryBuilderWithSet {
     fn set_computed(&mut self, field: &str, value: &str) -> &mut Self;
 }
 
+pub trait QueryBuilderWithFrom {
+    fn from(&mut self, item: &str) -> &mut Self;
+}
+
 pub enum Order {
     Asc(String),
     Desc(String),
