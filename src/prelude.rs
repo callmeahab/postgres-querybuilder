@@ -113,6 +113,10 @@ pub trait QueryBuilderWithSet {
     fn set_computed(&mut self, field: &str, value: &str) -> &mut Self;
 }
 
+pub trait QueryBuilderWithValues {
+    fn value<T: 'static + ToSql + Sync + Clone>(&mut self, value: T) -> &mut Self;
+}
+
 pub enum Order {
     Asc(String),
     Desc(String),
