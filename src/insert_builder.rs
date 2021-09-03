@@ -9,6 +9,8 @@ pub struct InsertBuilder {
     values: Vec<String>,
     returning_fields: Vec<String>,
     conditions: Vec<String>,
+    upsert_field: Option<String>,
+    upsert_set_fields: Vec<String>,
     params: Bucket,
 }
 
@@ -19,7 +21,7 @@ impl InsertBuilder {
     ///
     /// ```
     /// use postgres_querybuilder::InsertBuilder;
-    /// use postgres_querybuilder::prelude::{QueryBuilder, QueryBuilderWithValues, QueryBuilderWithWhere, QueryWithField};
+    /// use postgres_querybuilder::prelude::{QueryBuilder, QueryBuilderWithValues, QueryBuilderWithWhere, QueryWithFields};
     ///
     /// let mut builder = InsertBuilder::new("users");
     /// builder.field("username");
@@ -35,6 +37,8 @@ impl InsertBuilder {
             values: vec![],
             returning_fields: vec![],
             conditions: vec![],
+            upsert_field: None,
+            upsert_set_fields: vec![],
             params: Bucket::new(),
         }
     }
@@ -71,6 +75,19 @@ impl InsertBuilder {
         if self.values.len() > 0 {
             let values_query = self.values.join(", ");
             Some(format!("VALUES ({})", values_query))
+        } else {
+            None
+        }
+    }
+
+    fn on_conflict_query(&self) -> Option<String> {
+        if self.upsert_field.is_some() && self.upsert_set_fields.len() > 0 {
+            let upsert_fields = self.upsert_set_fields.iter()
+                .map(|field| format!("{} = EXCLUDED.{}", field, field)).collect::<Vec<String>>().join(", ");
+
+            Some(format!("ON CONFLICT ({}) DO UPDATE SET {}", self.upsert_field.as_ref().unwrap(), upsert_fields))
+        } else if self.upsert_field.is_some() {
+            Some(format!("ON CONFLICT ({}) DO NOTHING", self.upsert_field.as_ref().unwrap()))
         } else {
             None
         }
@@ -115,6 +132,10 @@ impl QueryBuilder for InsertBuilder {
             Some(value) => result.push(value),
             None => (),
         };
+        match self.on_conflict_query() {
+            Some(value) => result.push(value),
+            None => (),
+        };
         match self.returning_fields_to_query() {
             Some(value) => result.push(value),
             None => (),
@@ -131,14 +152,12 @@ impl QueryBuilder for InsertBuilder {
     }
 }
 
-impl QueryWithField for InsertBuilder {
+impl QueryWithFields for InsertBuilder {
     fn field(&mut self, field: &str) -> &mut Self {
         self.fields.push(field.to_string());
         self
     }
-}
 
-impl QueryWithFields for InsertBuilder {
     fn fields(&mut self, fields: Vec<&str>) -> &mut Self {
         for field in fields {
             self.fields.push(field.to_string());
@@ -160,13 +179,6 @@ impl QueryBuilderWithValues for InsertBuilder {
         self.values.push(format!("${}", index));
         self
     }
-
-    // fn values<T: 'static + ToSql + Sync + Clone>(&mut self, values: Vec<T>) -> &mut Self {
-    //     for value in values {
-    //         value(value);
-    //     }
-    //     self
-    // }
 }
 
 impl QueryBuilderWithReturningColumns for InsertBuilder {
@@ -185,6 +197,14 @@ impl QueryBuilderWithQueries for InsertBuilder {
     }
 }
 
+impl QueryBuilderWithOnConflict for InsertBuilder {
+    fn on_conflict(&mut self, conflict_field: &str, update_fields: Vec<&str>) -> &mut Self {
+        self.upsert_field = Some(conflict_field.to_string());
+        self.upsert_set_fields = update_fields.iter().map(|field| field.to_string()).collect();
+        self
+    }
+}
+
 #[cfg(test)]
 pub mod test {
     use super::*;
@@ -199,10 +219,12 @@ pub mod test {
     fn with_fields_and_values() {
         let mut builder = InsertBuilder::new("publishers");
         builder.field("id");
+        builder.field("name");
         builder.value(5);
+        builder.value("Milos");
         assert_eq!(
             builder.get_query(),
-            "INSERT INTO publishers (id) VALUES ($1)"
+            "INSERT INTO publishers (id, name) VALUES ($1, $2)"
         );
     }
 }

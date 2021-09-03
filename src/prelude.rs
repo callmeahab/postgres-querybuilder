@@ -90,11 +90,8 @@ pub trait QueryBuilderWithWhere: QueryBuilder {
     }
 }
 
-pub trait QueryWithField {
-    fn field(&mut self, field: &str) -> &mut Self;
-}
-
 pub trait QueryWithFields {
+    fn field(&mut self, field: &str) -> &mut Self;
     fn fields(&mut self, fields: Vec<&str>) -> &mut Self;
 }
 
@@ -123,11 +120,14 @@ pub trait QueryBuilderWithSet {
 
 pub trait QueryBuilderWithValues {
     fn value<T: 'static + ToSql + Sync + Clone>(&mut self, value: T) -> &mut Self;
-    // fn values<T: 'static + ToSql + Sync + Clone>(&mut self, values: Vec<T>) -> &mut Self;
 }
 
 pub trait QueryBuilderWithReturningColumns {
     fn returning(&mut self, fields: Vec<&str>) -> &mut Self;
+}
+
+pub trait QueryBuilderWithOnConflict {
+    fn on_conflict(&mut self, conflict_field: &str, update_fields: Vec<&str>) -> &mut Self;
 }
 
 pub enum Order {
