@@ -82,12 +82,23 @@ impl InsertBuilder {
 
     fn on_conflict_query(&self) -> Option<String> {
         if self.upsert_field.is_some() && self.upsert_set_fields.len() > 0 {
-            let upsert_fields = self.upsert_set_fields.iter()
-                .map(|field| format!("{} = EXCLUDED.{}", field, field)).collect::<Vec<String>>().join(", ");
+            let upsert_fields = self
+                .upsert_set_fields
+                .iter()
+                .map(|field| format!("{} = EXCLUDED.{}", field, field))
+                .collect::<Vec<String>>()
+                .join(", ");
 
-            Some(format!("ON CONFLICT ({}) DO UPDATE SET {}", self.upsert_field.as_ref().unwrap(), upsert_fields))
+            Some(format!(
+                "ON CONFLICT ({}) DO UPDATE SET {}",
+                self.upsert_field.as_ref().unwrap(),
+                upsert_fields
+            ))
         } else if self.upsert_field.is_some() {
-            Some(format!("ON CONFLICT ({}) DO NOTHING", self.upsert_field.as_ref().unwrap()))
+            Some(format!(
+                "ON CONFLICT ({}) DO NOTHING",
+                self.upsert_field.as_ref().unwrap()
+            ))
         } else {
             None
         }
@@ -200,7 +211,10 @@ impl QueryBuilderWithQueries for InsertBuilder {
 impl QueryBuilderWithOnConflict for InsertBuilder {
     fn on_conflict(&mut self, conflict_field: &str, update_fields: Vec<&str>) -> &mut Self {
         self.upsert_field = Some(conflict_field.to_string());
-        self.upsert_set_fields = update_fields.iter().map(|field| field.to_string()).collect();
+        self.upsert_set_fields = update_fields
+            .iter()
+            .map(|field| field.to_string())
+            .collect();
         self
     }
 }
