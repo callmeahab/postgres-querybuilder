@@ -6,6 +6,7 @@ pub struct UpdateBuilder {
     with_queries: Vec<(String, String)>,
     table: String,
     fields: Vec<String>,
+    returning_fields: Vec<String>,
     from_items: Vec<String>,
     conditions: Vec<String>,
     params: Bucket,
@@ -33,6 +34,7 @@ impl UpdateBuilder {
             table: from.into(),
             fields: vec![],
             from_items: vec![],
+            returning_fields: vec![],
             conditions: vec![],
             params: Bucket::new(),
         }
@@ -75,6 +77,15 @@ impl UpdateBuilder {
         }
     }
 
+    fn returning_fields_to_query(&self) -> Option<String> {
+        if self.returning_fields.len() > 0 {
+            let returning_query = self.returning_fields.join(", ");
+            Some(format!("RETURNING {}", returning_query))
+        } else {
+            None
+        }
+    }
+
     fn where_to_query(&self) -> Option<String> {
         if self.conditions.len() > 0 {
             let where_query = self.conditions.join(" AND ");
@@ -102,6 +113,10 @@ impl QueryBuilder for UpdateBuilder {
             None => (),
         };
         match self.from_items_to_query() {
+            Some(value) => result.push(value),
+            None => (),
+        };
+        match self.returning_fields_to_query() {
             Some(value) => result.push(value),
             None => (),
         };
@@ -140,6 +155,15 @@ impl QueryBuilderWithSet for UpdateBuilder {
 impl QueryBuilderWithQueries for UpdateBuilder {
     fn with_query(&mut self, name: &str, query: &str) -> &mut Self {
         self.with_queries.push((name.into(), query.into()));
+        self
+    }
+}
+
+impl QueryBuilderWithReturningColumns for UpdateBuilder {
+    fn returning(&mut self, fields: Vec<&str>) -> &mut Self {
+        for field in fields {
+            self.returning_fields.push(field.to_string());
+        }
         self
     }
 }
