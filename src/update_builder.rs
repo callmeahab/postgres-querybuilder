@@ -7,6 +7,7 @@ pub struct UpdateBuilder {
     table: String,
     fields: Vec<String>,
     returning_fields: Vec<String>,
+    from_items: Vec<String>,
     conditions: Vec<String>,
     params: Bucket,
 }
@@ -32,6 +33,7 @@ impl UpdateBuilder {
             with_queries: vec![],
             table: from.into(),
             fields: vec![],
+            from_items: vec![],
             returning_fields: vec![],
             conditions: vec![],
             params: Bucket::new(),
@@ -53,7 +55,7 @@ impl UpdateBuilder {
         }
     }
 
-    fn from_to_query(&self) -> String {
+    fn table_to_query(&self) -> String {
         format!("UPDATE {}", self.table)
     }
 
@@ -61,6 +63,15 @@ impl UpdateBuilder {
         if self.fields.len() > 0 {
             let fields_query = self.fields.join(", ");
             Some(format!("SET {}", fields_query))
+        } else {
+            None
+        }
+    }
+
+    fn from_items_to_query(&self) -> Option<String> {
+        if self.from_items.len() > 0 {
+            let from_items_query = self.from_items.join(", ");
+            Some(format!("FROM {}", from_items_query))
         } else {
             None
         }
@@ -96,8 +107,12 @@ impl QueryBuilder for UpdateBuilder {
             Some(value) => result.push(value),
             None => (),
         };
-        result.push(self.from_to_query());
+        result.push(self.table_to_query());
         match self.set_to_query() {
+            Some(value) => result.push(value),
+            None => (),
+        };
+        match self.from_items_to_query() {
             Some(value) => result.push(value),
             None => (),
         };
@@ -153,9 +168,17 @@ impl QueryBuilderWithReturningColumns for UpdateBuilder {
     }
 }
 
+impl QueryBuilderWithFrom for UpdateBuilder {
+    fn from(&mut self, item: &str) -> &mut Self {
+        self.from_items.push(item.into());
+        self
+    }
+}
+
 #[cfg(test)]
 pub mod test {
     use super::*;
+    use crate::SelectBuilder;
 
     #[test]
     fn from_scratch() {
@@ -183,6 +206,40 @@ pub mod test {
         assert_eq!(
             builder.get_query(),
             "UPDATE publishers SET id = $2, trololo = md5(42) WHERE trololo = $1"
+        );
+    }
+
+    #[test]
+    fn with_set_from_items_and_where() {
+        let mut qb = UpdateBuilder::new("features");
+        let query = qb
+            .where_condition("features.id = tiles.dataset_id")
+            .set_computed("geom", "tiles.geom")
+            .from("tiles")
+            .get_query();
+        assert_eq!(
+            query,
+            "UPDATE features SET geom = tiles.geom FROM tiles WHERE features.id = tiles.dataset_id"
+        );
+    }
+
+    #[test]
+    fn with_set_from_items_where_and_subquery() {
+        let mut subquery_builder = SelectBuilder::new("data_delivery_tiles");
+        let subquery = subquery_builder
+            .select("ST_Transform(ST_Union(data_delivery_tiles.geom), 4674) as geom")
+            .where_eq("dataset_id", 0)
+            .group_by("dataset_id")
+            .get_query();
+        let mut builder = UpdateBuilder::new("features");
+        let query = builder
+            .where_eq("features.id", 1)
+            .set_computed("geom", "tiles.geom")
+            .from(format!("({}) tiles", subquery).as_str())
+            .get_query();
+        assert_eq!(
+            query.to_lowercase(),
+            "update features set geom = tiles.geom from (select st_transform(st_union(data_delivery_tiles.geom), 4674) as geom from data_delivery_tiles where dataset_id = $1 group by dataset_id) tiles where features.id = $1"
         );
     }
 }

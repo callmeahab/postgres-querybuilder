@@ -130,6 +130,10 @@ pub trait QueryBuilderWithOnConflict {
     fn on_conflict(&mut self, conflict_field: &str, update_fields: Vec<&str>) -> &mut Self;
 }
 
+pub trait QueryBuilderWithFrom {
+    fn from(&mut self, item: &str) -> &mut Self;
+}
+
 pub enum Order {
     Asc(String),
     Desc(String),
