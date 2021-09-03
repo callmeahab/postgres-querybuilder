@@ -134,15 +134,6 @@ pub trait QueryBuilderWithFrom {
     fn from(&mut self, item: &str) -> &mut Self;
 }
 
-pub struct OnConflict {
-    pub target: Option<String>,
-    pub action: String,
-}
-
-pub trait QueryBuilderWithOnConflict {
-    fn on_conflict(&mut self, target: Option<&str>, action: &str) -> &mut Self;
-}
-
 pub enum Order {
     Asc(String),
     Desc(String),
