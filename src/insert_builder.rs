@@ -121,16 +121,6 @@ impl InsertBuilder {
             None
         }
     }
-
-    fn on_conflict_to_query(&self) -> Option<String> {
-        match &self.on_conflict {
-            Some(item) => match &item.target {
-                Some(target) => Some(format!("ON CONFLICT ({}) DO {}", target, item.action)),
-                None => Some(format!("ON CONFLICT DO {}", item.action)),
-            },
-            None => None,
-        }
-    }
 }
 
 impl QueryBuilder for InsertBuilder {
@@ -162,10 +152,6 @@ impl QueryBuilder for InsertBuilder {
             None => (),
         };
         match self.where_to_query() {
-            Some(value) => result.push(value),
-            None => (),
-        };
-        match self.on_conflict_to_query() {
             Some(value) => result.push(value),
             None => (),
         };
