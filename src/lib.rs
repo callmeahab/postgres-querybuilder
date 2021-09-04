@@ -8,14 +8,16 @@
 extern crate serial_test;
 
 pub mod bucket;
-mod insert_builder;
 pub mod prelude;
+mod insert_builder;
 mod select_builder;
 mod update_builder;
+mod delete_builder;
 
 pub use insert_builder::InsertBuilder;
 pub use select_builder::SelectBuilder;
 pub use update_builder::UpdateBuilder;
+pub use delete_builder::DeleteBuilder;
 
 #[cfg(test)]
 mod test {
