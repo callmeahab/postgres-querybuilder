@@ -24,14 +24,14 @@ impl InsertBuilder {
     ///
     /// let mut builder = InsertBuilder::new("users");
     /// builder.fields(vec!["id", "username"]); // pass fields as an array
-    /// builder.field("alias"); // pass in a single field
+    /// builder.field("shape"); // pass in a single field
     /// builder.value(22);
-    /// builder.value("rick".to_string());
-    /// builder.value("none".to_string());
+    /// builder.value("rick");
+    /// builder.value_with_fn("some_geojson", vec!["ST_Transform", "ST_GeomFromGeoJSON"], vec![Some("4263"), None]);
     /// builder.on_conflict("id", vec!["username", "alias"]); // upsert clause
     /// builder.returning(vec!["id"]); // returning columns
     ///
-    /// assert_eq!(builder.get_query(), "INSERT INTO users (id, username, alias) VALUES ($1, $2, $3) ON CONFLICT (id) DO UPDATE SET username = EXCLUDED.username, alias = EXCLUDED.alias RETURNING id");
+    /// assert_eq!(builder.get_query(), "INSERT INTO users (id, username, shape) VALUES ($1, $2, ST_Transform(ST_GeomFromGeoJSON($3), 4263)) ON CONFLICT (id) DO UPDATE SET username = EXCLUDED.username, alias = EXCLUDED.alias RETURNING id");
     /// ```
     pub fn new(from: &str) -> Self {
         InsertBuilder {
@@ -173,6 +173,22 @@ impl QueryBuilderWithValues for InsertBuilder {
         self.values.push(format!("${}", index));
         self
     }
+
+    fn value_with_fn<T: 'static + ToSql + Sync + Clone>(&mut self, value: T, wrapper_fn: Vec<&str>, args: Vec<Option<&str>>) -> &mut Self {
+        let index = self.params.push(value);
+        let prefix = wrapper_fn.join("(");
+        let mut rev_args = args;
+        rev_args.reverse();
+        let suffix = wrapper_fn.iter().enumerate().map(|(idx, _)| {
+            if rev_args.get(idx).is_some() && rev_args.get(idx).unwrap().is_some() {
+                format!(", {})", rev_args.get(idx).unwrap().unwrap())
+            } else {
+                ")".to_string()
+            }
+        }).collect::<String>();
+        self.values.push(format!("{}(${}{}", prefix, index, suffix));
+        self
+    }
 }
 
 impl QueryBuilderWithReturningColumns for InsertBuilder {
@@ -215,16 +231,17 @@ pub mod test {
     #[test]
     fn with_fields_and_values() {
         let mut builder = InsertBuilder::new("users");
-        builder.fields(vec!["id", "username"]);
+        builder.fields(vec!["id", "username", "shape"]);
         builder.field("alias");
         builder.value(22);
-        builder.value("rick".to_string());
-        builder.value("none".to_string());
+        builder.value("rick");
+        builder.value_with_fn("some_geojson", vec!["ST_Transform", "ST_GeomFromGeoJSON"], vec![Some("4362"), None]);
+        builder.value("none");
         builder.on_conflict("id", vec!["username", "alias"]);
         builder.returning(vec!["id"]);
         assert_eq!(
             builder.get_query(),
-           "INSERT INTO users (id, username, alias) VALUES ($1, $2, $3) ON CONFLICT (id) DO UPDATE SET username = EXCLUDED.username, alias = EXCLUDED.alias RETURNING id"
+           "INSERT INTO users (id, username, shape, alias) VALUES ($1, $2, ST_Transform(ST_GeomFromGeoJSON($3), 4362), $4) ON CONFLICT (id) DO UPDATE SET username = EXCLUDED.username, alias = EXCLUDED.alias RETURNING id"
         );
     }
 }

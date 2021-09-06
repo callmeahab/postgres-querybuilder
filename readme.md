@@ -34,8 +34,8 @@ let user = rows.first().map(User::from);
   - [x] where equal
   - [x] where not equal
   - [ ] or where condition
-  - [ ] returning
+  - [x] returning
   - [x] `WITH` query
-- [ ] Insert query
-- [ ] Delete query
+- [x] Insert query
+- [x] Delete query
 - [ ] from subrequest
