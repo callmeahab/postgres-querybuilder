@@ -8,7 +8,6 @@ pub struct InsertBuilder {
     fields: Vec<String>,
     values: Vec<String>,
     returning_fields: Vec<String>,
-    conditions: Vec<String>,
     upsert_field: Option<String>,
     upsert_set_fields: Vec<String>,
     params: Bucket,
@@ -21,13 +20,18 @@ impl InsertBuilder {
     ///
     /// ```
     /// use postgres_querybuilder::InsertBuilder;
-    /// use postgres_querybuilder::prelude::{QueryBuilder, QueryBuilderWithValues, QueryBuilderWithWhere, QueryWithFields};
+    /// use postgres_querybuilder::prelude::{ QueryBuilder, QueryBuilderWithValues, QueryBuilderWithWhere, QueryWithFields, QueryBuilderWithReturningColumns, QueryBuilderWithOnConflict };
     ///
     /// let mut builder = InsertBuilder::new("users");
-    /// builder.field("username");
+    /// builder.fields(vec!["id", "username"]); // pass fields as an array
+    /// builder.field("alias"); // pass in a single field
+    /// builder.value(22);
     /// builder.value("rick".to_string());
+    /// builder.value("none".to_string());
+    /// builder.on_conflict("id", vec!["username", "alias"]); // upsert clause
+    /// builder.returning(vec!["id"]); // returning columns
     ///
-    /// assert_eq!(builder.get_query(), "INSERT INTO users (username) VALUES ($1)");
+    /// assert_eq!(builder.get_query(), "INSERT INTO users (id, username, alias) VALUES ($1, $2, $3) ON CONFLICT (id) DO UPDATE SET username = EXCLUDED.username, alias = EXCLUDED.alias RETURNING id");
     /// ```
     pub fn new(from: &str) -> Self {
         InsertBuilder {
@@ -36,7 +40,6 @@ impl InsertBuilder {
             fields: vec![],
             values: vec![],
             returning_fields: vec![],
-            conditions: vec![],
             upsert_field: None,
             upsert_set_fields: vec![],
             params: Bucket::new(),
@@ -112,15 +115,6 @@ impl InsertBuilder {
             None
         }
     }
-
-    fn where_to_query(&self) -> Option<String> {
-        if self.conditions.len() > 0 {
-            let where_query = self.conditions.join(" AND ");
-            Some(format!("WHERE {}", where_query))
-        } else {
-            None
-        }
-    }
 }
 
 impl QueryBuilder for InsertBuilder {
@@ -151,10 +145,6 @@ impl QueryBuilder for InsertBuilder {
             Some(value) => result.push(value),
             None => (),
         };
-        match self.where_to_query() {
-            Some(value) => result.push(value),
-            None => (),
-        };
         result.join(" ")
     }
 
@@ -173,13 +163,6 @@ impl QueryWithFields for InsertBuilder {
         for field in fields {
             self.fields.push(field.to_string());
         }
-        self
-    }
-}
-
-impl QueryBuilderWithWhere for InsertBuilder {
-    fn where_condition(&mut self, raw: &str) -> &mut Self {
-        self.conditions.push(raw.to_string());
         self
     }
 }
@@ -231,14 +214,17 @@ pub mod test {
 
     #[test]
     fn with_fields_and_values() {
-        let mut builder = InsertBuilder::new("publishers");
-        builder.field("id");
-        builder.field("name");
-        builder.value(5);
-        builder.value("Milos");
+        let mut builder = InsertBuilder::new("users");
+        builder.fields(vec!["id", "username"]);
+        builder.field("alias");
+        builder.value(22);
+        builder.value("rick".to_string());
+        builder.value("none".to_string());
+        builder.on_conflict("id", vec!["username", "alias"]);
+        builder.returning(vec!["id"]);
         assert_eq!(
             builder.get_query(),
-            "INSERT INTO publishers (id, name) VALUES ($1, $2)"
+           "INSERT INTO users (id, username, alias) VALUES ($1, $2, $3) ON CONFLICT (id) DO UPDATE SET username = EXCLUDED.username, alias = EXCLUDED.alias RETURNING id"
         );
     }
 }
