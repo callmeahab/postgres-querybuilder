@@ -120,6 +120,7 @@ pub trait QueryBuilderWithSet {
 
 pub trait QueryBuilderWithValues {
     fn value<T: 'static + ToSql + Sync + Clone>(&mut self, value: T) -> &mut Self;
+    fn value_fragment<T: 'static + ToSql + Sync + Clone>(&mut self, fragment: &str, values: Vec<T>) -> &mut Self;
     fn value_with_fn<T: 'static + ToSql + Sync + Clone>(&mut self, value: T, wrapper_fn: Vec<&str>, args: Vec<Option<&str>>) -> &mut Self;
 }
 

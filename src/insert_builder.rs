@@ -27,11 +27,15 @@ impl InsertBuilder {
     /// builder.field("shape"); // pass in a single field
     /// builder.value(22);
     /// builder.value("rick");
-    /// builder.value_with_fn("some_geojson", vec!["ST_Transform", "ST_GeomFromGeoJSON"], vec![Some("4263"), None]);
+    /// builder.value_fragment("ST_Transform(ST_GeomFromGeoJSON(?), ?)", vec![
+    ///     "some_geojson", "4263",
+    /// ]);
+    /// // Alternatively you can pass functions and parameters to wrap value
+    /// // builder.value_with_fn("some_geojson", vec!["ST_Transform", "ST_GeomFromGeoJSON"], vec![Some("4263"), None]);
     /// builder.on_conflict("id", vec!["username", "alias"]); // upsert clause
     /// builder.returning(vec!["id"]); // returning columns
     ///
-    /// assert_eq!(builder.get_query(), "INSERT INTO users (id, username, shape) VALUES ($1, $2, ST_Transform(ST_GeomFromGeoJSON($3), 4263)) ON CONFLICT (id) DO UPDATE SET username = EXCLUDED.username, alias = EXCLUDED.alias RETURNING id");
+    /// assert_eq!(builder.get_query(), "INSERT INTO users (id, username, shape) VALUES ($1, $2, ST_Transform(ST_GeomFromGeoJSON($3), $4)) ON CONFLICT (id) DO UPDATE SET username = EXCLUDED.username, alias = EXCLUDED.alias RETURNING id");
     /// ```
     pub fn new(from: &str) -> Self {
         InsertBuilder {
@@ -171,6 +175,26 @@ impl QueryBuilderWithValues for InsertBuilder {
     fn value<T: 'static + ToSql + Sync + Clone>(&mut self, value: T) -> &mut Self {
         let index = self.params.push(value);
         self.values.push(format!("${}", index));
+        self
+    }
+
+    fn value_fragment<T: 'static + ToSql + Sync + Clone>(&mut self, fragment: &str, values: Vec<T>) -> &mut Self {
+        let mut result: String = "".to_owned();
+        let mut param_count: usize = 0;
+        for character in fragment.chars() {
+            if character == '?' {
+                let index = if values.get(param_count).is_some() {
+                    self.params.push(values.get(param_count).unwrap().clone())
+                } else {
+                    self.params.push("missing_parameter")
+                };
+                result.push_str(&format!("${}", index));
+                param_count = param_count + 1;
+            } else {
+                result.push_str(&character.to_string());
+            }
+        }
+        self.values.push(result);
         self
     }
 
