@@ -3,7 +3,7 @@ use postgres_types::ToSql;
 type BucketValue = dyn ToSql + Sync;
 
 pub struct Bucket {
-    content: Vec<Box<BucketValue>>,
+    pub content: Vec<Box<BucketValue>>,
 }
 
 impl Bucket {

@@ -76,6 +76,10 @@ impl SelectBuilder {
         self.conditions.push(raw);
         self
     }
+
+    pub fn get_values(&mut self) -> &Vec<Box<(dyn ToSql + Sync + 'static)>> {
+        &self.params.content
+    }
 }
 
 impl SelectBuilder {
@@ -314,6 +318,7 @@ pub mod test {
         builder.where_eq("trololo", 42);
         builder.where_eq("tralala", true);
         builder.where_ne("trululu", "trololo");
+
         assert_eq!(
             builder.get_query(),
             "SELECT id, name FROM publishers WHERE trololo = $1 AND tralala = $2 AND trululu <> $3"
