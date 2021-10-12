@@ -39,6 +39,10 @@ impl UpdateBuilder {
             params: Bucket::new(),
         }
     }
+
+    pub fn get_values(&mut self) -> &Vec<Box<(dyn ToSql + Sync + 'static)>> {
+        &self.params.content
+    }
 }
 
 impl UpdateBuilder {
